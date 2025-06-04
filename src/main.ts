@@ -3,6 +3,7 @@ import './style.css'
 import App from './App.vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import {createRouter, createWebHashHistory} from "vue-router";
 
 const route = [
@@ -14,8 +15,28 @@ const route = [
             {
                 path:'/home',
                 component:()=>import("./page/home.vue"),
+            },
+            {
+                path:'/user',
+                component:()=>import('./page/user/user.vue')
+            },
+            {
+                path:'/reward',
+                component:()=>import("./page/reward/reward.vue"),
+            },
+            {
+                path:'/class',
+                component:()=>import('./page/class/class.vue'),
+            },
+            {
+                path:'/classall',
+                component:()=>import('./page/classall/classall.vue'),
             }
         ]
+    },
+    {
+        path:'/login',
+        component:()=>import('./page/login/login.vue'),
     }
 ]
 const router = createRouter({
