@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref} from 'vue'
+import {useRouter} from "vue-router";
+import {ElMessage, ElNotification} from "element-plus";
+
+// 状态
+const router = useRouter()
 
 const activeMenu = ref('1')
 const sidebarCollapsed = ref(false)
+const role = ref('')
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -11,9 +17,78 @@ const toggleSidebar = () => {
 const menuItems = [
   { name: '/user', title: '用户管理', icon: 'fa-users' },
   { name: '/reward', title: '悬赏管理', icon: 'fa-trophy' },
+  { name: '/permission', title: '权限管理', icon: 'fa-cogs' },
   { name: '/classall', title: '课堂管理(教师)', icon: 'fa-chalkboard-teacher' },
-  { name: '/class', title: '我的课程(学生)', icon: 'fa-book' }
+  { name: '/class', title: '我的课程(学生)', icon: 'fa-book' },
 ]
+
+interface UserInfo{
+  username: string
+  name: string
+  age: number
+  address: string
+  phone: string
+  email: string
+  avatar: string
+}
+const self_info = ref<UserInfo>()
+const exitLogin = ()=>{
+  localStorage.removeItem('token')
+  router.push('/login')
+}
+const self_info_callback = async () => {
+  try{
+    let result = await fetch("/api/user/self",{
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": localStorage.getItem("token")??""
+      },
+    })
+    if(result.status === 200){
+      self_info.value = await result.json() as UserInfo
+      ElNotification({
+        title: '欢迎您！',
+        message: `${self_info.value.name}，欢迎回来`,
+      })
+    }else{
+      router.push("/login")
+      return
+    }
+  }catch(error){
+    ElMessage.error({
+      message: "获取个人信息失败，正在跳转登陆页",
+    })
+    router.push("/login")
+    return
+  }
+
+  try{
+    let result = await fetch(`/api/user/roles?username=${self_info.value.username}`,{
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": localStorage.getItem("token")??""
+      },
+    })
+    if(result.status === 200){
+      let roles = await result.json()
+      for(let roleValue of roles){
+        role.value += roleValue.description
+      }
+    }else{
+      ElMessage.error({
+        message:"无法获取用户角色"
+      })
+    }
+  }catch(error){
+    ElMessage.error({
+      message: "获取用户角色失败",
+    })
+  }
+}
+self_info_callback()
+
 </script>
 
 <template>
@@ -45,7 +120,7 @@ const menuItems = [
     </header>
 
     <!-- 主内容区 -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-auto">
       <!-- 侧边栏 -->
       <aside
           :class="sidebarCollapsed ? 'w-20' : 'w-64'"
@@ -92,18 +167,22 @@ const menuItems = [
         <div class="p-4 border-t border-gray-200">
           <div class="flex items-center space-x-3">
             <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-              <img src="https://picsum.photos/200/200?random=1" alt="用户头像" class="w-full h-full object-cover">
+              <img :src="self_info?.avatar??'https://picsum.photos/200/200?random=1'" alt="用户头像" class="w-full h-full object-cover">
             </div>
             <div :class="sidebarCollapsed ? 'hidden' : 'block'">
-              <p class="text-sm font-medium text-gray-800">李老师</p>
-              <p class="text-xs text-gray-500">管理员</p>
+              <p class="text-sm font-medium text-gray-800">{{self_info?.name}}</p>
+              <p class="text-xs text-gray-500">{{role}}</p>
             </div>
+          </div>
+          <div class="flex items-center space-x-3 border-gray-200">
+            <el-button type="danger" @click="exitLogin">退出登陆</el-button>
+            <el-button type="primary" @click="router.push('/self_info')">修改信息</el-button>
           </div>
         </div>
       </aside>
 
       <!-- 内容区 -->
-      <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+      <main class="flex-1 overflow-y-auto bg-gray-50 p-6" style="height: calc(100vh - 140px);">
         <router-view />
       </main>
     </div>

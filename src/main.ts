@@ -29,8 +29,16 @@ const route = [
                 component:()=>import('./page/class/class.vue'),
             },
             {
+                path:'/permission',
+                component:()=>import('./page/permission/permission.vue'),
+            },
+            {
                 path:'/classall',
                 component:()=>import('./page/classall/classall.vue'),
+            },
+            {
+                path:'/self_info',
+                component:()=>import('./page/selfInfo/selfInfo.vue'),
             }
         ]
     },
