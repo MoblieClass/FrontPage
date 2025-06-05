@@ -15,6 +15,7 @@ const toggleSidebar = () => {
 }
 
 const menuItems = [
+  { name: '/home', title: '仪表盘', icon: 'fa-laptop' },
   { name: '/user', title: '用户管理', icon: 'fa-users' },
   { name: '/reward', title: '悬赏管理', icon: 'fa-trophy' },
   { name: '/permission', title: '权限管理', icon: 'fa-cogs' },
@@ -47,6 +48,7 @@ const self_info_callback = async () => {
     })
     if(result.status === 200){
       self_info.value = await result.json() as UserInfo
+      localStorage.setItem('username', self_info.value.username)
       ElNotification({
         title: '欢迎您！',
         message: `${self_info.value.name}，欢迎回来`,

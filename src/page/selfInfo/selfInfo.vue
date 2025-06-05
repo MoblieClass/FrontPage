@@ -110,7 +110,7 @@ const handleSubmit = async () => {
       address: form.value.address || null,
       phone: form.value.phone || null,
       email: form.value.email || null,
-      password: sha256encrypt(form.value.password) || null,
+      password: (form.value.password==''||form.value.password==null)?"":sha256encrypt(form.value.password),
       avatar: avatarFile?.value
     }
 

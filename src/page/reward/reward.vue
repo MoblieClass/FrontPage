@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {ref, onMounted, watch} from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import dayjs from 'dayjs'
 
 // 状态管理
@@ -21,6 +21,7 @@ const showRewardDetail = ref(false)
 const showCreateForm = ref(false)
 const showEditForm = ref(false)
 const myCommits = ref<RewardCommit[]>([])
+const allCommits = ref<RewardCommit[]>([])
 
 // 表单数据
 const formData = ref<AddRewardRequest>({
@@ -28,7 +29,7 @@ const formData = ref<AddRewardRequest>({
   description: '',
   startDate: dayjs().format('YYYY-MM-DD'),
   endDate: dayjs().add(7, 'day').format('YYYY-MM-DD'),
-  isFinished: false,
+  finished: false,
   bonus: ''
 })
 
@@ -53,7 +54,7 @@ const fetchRewards = async () => {
       } else if (statusFilter.value === 'expired') {
         url += `&endDate=${encodeURIComponent(now)}&comparison=lt`
       } else if (statusFilter.value === 'completed') {
-        url += `&isFinished=true`
+        url += `&finished=true`
       }
     }
 
@@ -76,13 +77,13 @@ const fetchRewards = async () => {
 
 // 编辑悬赏
 const editReward = (reward: RewardModel) => {
-  currentReward.value = { ...reward }
+  currentReward.value = {...reward}
   formData.value = {
     title: reward.title,
     description: reward.description,
     startDate: dayjs(reward.startDate).format('YYYY-MM-DD'),
     endDate: dayjs(reward.endDate).format('YYYY-MM-DD'),
-    isFinished: reward.isFinished,
+    finished: reward.finished,
     bonus: reward.bonus
   }
   showEditForm.value = true
@@ -104,12 +105,15 @@ const createReward = async () => {
     const requestData = {
       ...formData.value,
       startDate: dayjs(formData.value.startDate).toISOString(),
-      endDate: dayjs(formData.value.endDate).toISOString()
+      endDate: dayjs(formData.value.endDate).toISOString(),
     }
 
     const response = await fetch('/api/reward/add', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": localStorage.getItem('token') ?? ''
+      },
       body: JSON.stringify(requestData)
     })
 
@@ -127,7 +131,7 @@ const createReward = async () => {
       description: '',
       startDate: dayjs().format('YYYY-MM-DD'),
       endDate: dayjs().add(7, 'day').format('YYYY-MM-DD'),
-      isFinished: false,
+      finished: false,
       bonus: ''
     }
   } catch (error: any) {
@@ -155,13 +159,14 @@ const updateReward = async () => {
     // 转换日期格式
     const requestData = {
       ...formData.value,
-      startDate: dayjs(formData.value.startDate).toISOString(),
-      endDate: dayjs(formData.value.endDate).toISOString()
+      startDate: dayjs(formData.value.startDate).format('YYYY-MM-DDTHH:mm:ss'),
+      endDate: dayjs(formData.value.endDate).format('YYYY-MM-DDTHH:mm:ss')
     }
 
     const response = await fetch(`/api/reward/${currentReward.value.id}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json',
+      headers: {
+        'Content-Type': 'application/json',
         "Authorization": `${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(requestData)
@@ -193,8 +198,10 @@ const deleteReward = async (id: number) => {
   try {
     const response = await fetch(`/api/reward/${id}`, {
       method: 'DELETE',
-      headers: {'Content-Type': 'application/json',
-        "Authorization": `${localStorage.getItem('token')}`,},
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": `${localStorage.getItem('token')}`,
+      },
     })
 
     if (!response.ok) {
@@ -230,6 +237,7 @@ const getRewardDetail = async (id: number) => {
     currentReward.value = await response.json()
     showRewardDetail.value = true
     fetchMyCommits(id)
+    fetchAllCommit(id)
   } catch (error: any) {
     errorMessage.value = error.message
     console.error('获取悬赏详情失败:', error)
@@ -253,9 +261,11 @@ const submitReward = async () => {
   try {
     const response = await fetch(`/api/reward/commit/${currentReward.value.id}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json',
-        "Authorization": `${localStorage.getItem('token')}`,},
-      body: JSON.stringify({content: commitContent.value})
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": `${localStorage.getItem('token')}`,
+      },
+      body: commitContent.value
     })
 
     if (!response.ok) {
@@ -276,10 +286,17 @@ const submitReward = async () => {
 // 获取我的提交
 const fetchMyCommits = async (rewardId: number) => {
   try {
-    const response = await fetch(`/api/reward/${rewardId}/my-commits`)
+    const response = await fetch(`/api/reward/${rewardId}/my-commits`, {
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": `${localStorage.getItem('token')}`,
+      }
+    })
 
     if (response.ok) {
-      myCommits.value = await response.json()
+      myCommits.value = await response.json() || []
+      // 过滤只保留当前悬赏的提交
+      myCommits.value = myCommits.value.filter(commit => commit.rewardId === rewardId)
     } else {
       myCommits.value = []
     }
@@ -289,9 +306,66 @@ const fetchMyCommits = async (rewardId: number) => {
   }
 }
 
+// 获取别人的提交
+const fetchAllCommit = async (rewardId: number) => {
+  try {
+    const response = await fetch(`/api/reward/${rewardId}/all-commits`, {
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": `${localStorage.getItem('token')}`,
+      }
+    })
+
+    if (response.ok) {
+      allCommits.value = await response.json() || []
+    } else {
+      allCommits.value = []
+    }
+  } catch (error) {
+    allCommits.value = []
+    console.error('获取全部提交失败:', error)
+  }
+}
+
+
+// 删除提交记录
+const deleteCommit = async (commitId: number, rewardId: number) => {
+  if (!confirm('确定要删除这个提交吗？此操作不可撤销。')) return
+
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(`/api/reward/commit/${commitId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": localStorage.getItem('token') ?? ''
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`删除提交失败: ${await response.text()}`)
+    }
+
+    successMessage.value = '提交删除成功'
+
+    // 更新我的提交记录
+    if (currentReward.value?.id === rewardId) {
+      fetchMyCommits(rewardId)
+    }
+
+  } catch (error: any) {
+    errorMessage.value = error.message
+    console.error('删除提交失败:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // 格式化日期
 const formatDate = (date: string | null) => {
-  return date ? dayjs(date).format('YYYY-MM-DD') : '-'
+  return date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
 }
 
 // 检查悬赏状态
@@ -300,7 +374,7 @@ const getRewardStatus = (reward: RewardModel) => {
   const startDate = dayjs(reward.startDate)
   const endDate = dayjs(reward.endDate)
 
-  if (reward.isFinished) return 'completed'
+  if (reward.finished) return 'completed'
   if (now.isBefore(startDate)) return 'upcoming'
   if (now.isAfter(endDate)) return 'expired'
   return 'active'
@@ -355,7 +429,7 @@ interface RewardModel {
   description: string
   startDate: string
   endDate: string
-  isFinished: boolean
+  finished: boolean
   bonus: string
   creatorId: number
   creatorName: string
@@ -366,17 +440,18 @@ interface AddRewardRequest {
   description: string
   startDate: string
   endDate: string
-  isFinished: boolean
+  finished: boolean
   bonus: string
 }
 
 interface RewardCommit {
   id: number
   rewardId: number
+  rewardTitle?: string
   userId: number
   username: string
   content: string
-  createTime: string
+  createdAt: string
 }
 </script>
 
@@ -650,10 +725,41 @@ interface RewardCommit {
                   <div v-if="myCommits.length > 0" class="mb-6">
                     <h4 class="text-sm font-medium text-gray-900 mb-2">我的提交</h4>
                     <div v-for="commit in myCommits" :key="commit.id" class="bg-gray-50 p-3 rounded-md mb-2">
-                      <div class="text-xs text-gray-500 mb-1">提交于 {{ formatDate(commit.createTime) }}</div>
-                      <div class="text-sm text-gray-900 whitespace-pre-wrap">{{ commit.content }}</div>
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <div class="text-xs text-gray-500 mb-1">提交于 {{ formatDate(commit.createdAt) }}</div>
+                          <div class="text-sm text-gray-900 whitespace-pre-wrap">{{ commit.content }}</div>
+                        </div>
+                        <button
+                            class="text-red-600 hover:text-red-900"
+                            @click="deleteCommit(commit.id, currentReward.id)"
+                        >
+                          删除
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  <!-- 全部提交 -->
+                  <div v-if="myCommits.length > 0" class="mb-6">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">全部提交</h4>
+                    <div v-for="commit in myCommits" :key="commit.id" class="bg-gray-50 p-3 rounded-md mb-2">
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <div class="text-xs text-gray-500 mb-1">{{commit.userId}} 提交于 {{ formatDate(commit.createdAt) }}</div>
+                          <div class="text-sm text-gray-900 whitespace-pre-wrap">{{ commit.content }}</div>
+                        </div>
+                        <button
+                            class="text-red-600 hover:text-red-900"
+                            @click="deleteCommit(commit.id, currentReward.id)"
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+
                 </div>
               </div>
             </div>
@@ -697,8 +803,7 @@ interface RewardCommit {
                         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="请输入悬赏标题"
                         type="text"
-                    >
-                  </div>
+                    ></div>
 
                   <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="description">描述 <span
@@ -749,7 +854,7 @@ interface RewardCommit {
                   <div class="mb-4">
                     <label class="flex items-center">
                       <input
-                          v-model="formData.isFinished"
+                          v-model="formData.finished"
                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           type="checkbox"
                       >
@@ -858,7 +963,7 @@ interface RewardCommit {
                   <div class="mb-4">
                     <label class="flex items-center">
                       <input
-                          v-model="formData.isFinished"
+                          v-model="formData.finished"
                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           type="checkbox"
                       >
@@ -887,6 +992,7 @@ interface RewardCommit {
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -899,14 +1005,15 @@ interface RewardCommit {
 .fade-enter, .fade-leave-to {
   opacity: 0;
 }
-   /* 遮罩层（背景蒙层） */
- .fixed.inset-0.z-50 {
-   z-index: 1040; /* 调整遮罩层层级 */
- }
+
+/* 遮罩层（背景蒙层） */
+.fixed.inset-0.z-50 {
+  z-index: 40; /* 调整遮罩层层级 */
+}
 
 /* 模态框内容层 */
 .inline-block.align-bottom.bg-white.rounded-lg {
-  z-index: 1050; /* 内容层层级高于遮罩层 */
+  z-index: 50; /* 内容层层级高于遮罩层 */
   position: relative; /* 确保层级生效 */
 }
 </style>
