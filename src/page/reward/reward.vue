@@ -412,6 +412,37 @@ const getStatusText = (status: string) => {
   }
 }
 
+// 导出数据
+const handleExport = () => {
+  const headers = ['标题', '发布者', '开始日期', '结束日期', '奖励', '状态'];
+  const rows = rewards.value.map(reward => [
+    reward.title,
+    reward.creatorName || '未知',
+    formatDate(reward.startDate),
+    formatDate(reward.endDate),
+    reward.bonus,
+    getStatusText(getRewardStatus(reward))
+  ]);
+
+  const csvContent = [
+    headers.join(','), // 表头
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+  ].join('\n');
+
+  // 创建 Blob 对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+
+  // 生成下载链接
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `悬赏数据_${dayjs().format('YYYYMMDD_HHmmss')}.csv`; // 带时间戳的文件名
+
+  // 模拟点击下载
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link); // 清理临时链接
+};
+
 // 初始化
 onMounted(() => {
   fetchRewards()
@@ -616,6 +647,12 @@ interface RewardCommit {
             <div>
               <nav aria-label="Pagination" class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                 <button
+                    class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                    @click="handleExport"
+                >
+                  <i class="fa fa-download mr-2"></i>导出数据
+                </button>
+                <button
                     :disabled="page === 1"
                     class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                     @click="page -= 1"
@@ -637,7 +674,6 @@ interface RewardCommit {
                 >
                   {{ p }}
                 </button>
-
                 <button
                     :disabled="page * pageSize >= total"
                     class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"

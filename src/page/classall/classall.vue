@@ -87,6 +87,12 @@
               <div>
                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                   <button
+                      @click="handleExport"
+                      class="ml-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200"
+                  >
+                    <i class="fa fa-download mr-1"></i> 导出课程数据
+                  </button>
+                  <button
                       @click="prevPage"
                       :disabled="currentPage === 1"
                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
@@ -417,7 +423,6 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const totalCourses = ref(0);
 const searchQuery = ref('');
-const studentSearchQuery = ref('');
 const courseStudents = ref<any>([]);
 const currentCourse = ref<Course>();
 
@@ -662,11 +667,6 @@ const fetchCourseStudents = async (query = '') => {
   }
 };
 
-// 搜索学生
-const searchStudents = () => {
-  fetchCourseStudents(studentSearchQuery.value);
-};
-
 // 添加学生到课程
 const openAddStudentModal = () => {
   newStudentUsername.value = '';
@@ -739,6 +739,41 @@ const showNotification = (message:string, type = 'success') => {
 
 const hideNotification = () => {
   notification.value.show = false;
+};
+
+const handleExport = () => {
+  // 构建 CSV 表头（与表格列对应）
+  const headers = ['课程名称', '教师名', '课程类别', '教室名', '开始时间', '结束时间', '上课周'];
+
+  // 提取当前分页的课程数据
+  const rows = courses.value.map(course => [
+    course.courseName,
+    course.teacherName,
+    course.courseType,
+    course.classroom,
+    course.startTime,
+    course.endTime,
+    `${course.startWeek}-${course.endWeek}周`
+  ]);
+
+  // 生成 CSV 字符串（包含表头和数据行）
+  const csvContent = [
+    headers.join(','), // 表头行
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(',')) // 数据行（转义引号和逗号）
+  ].join('\n');
+
+  // 创建 Blob 对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+
+  // 生成下载链接
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `课程数据_${new Date().toISOString().replace(/:/g, '-')}.csv`; // 带时间戳的文件名
+
+  // 模拟点击下载
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link); // 清理临时链接
 };
 
 // 页面加载时获取课程列表

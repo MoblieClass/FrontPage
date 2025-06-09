@@ -290,6 +290,13 @@
             <div>
               <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 <button
+                    @click="handleExport"
+                    class="ml-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                  <i class="fa fa-download mr-2"></i>
+                  导出用户数据
+                </button>
+                <button
                     :disabled="page === 1"
                     @click="page -= 1"
                     class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
@@ -635,6 +642,34 @@ const resetForm = () => {
   errorMessage.value = ''
   searchName.value = ''
   assignedRoles.value = [] // 重置角色选择
+}
+
+const handleExport = () => {
+  const headers = ['用户名', '昵称', '邮箱', '角色', '年龄', '地址', '手机号']
+  const rows = users.value.map(user => [
+    user.username,
+    user.name || '-',
+    user.email,
+    user.roles.length ? user.roles.map(role => role.name).join(',') : '-',
+    user.age || '-',
+    user.address || '-',
+    user.phone || '-'
+  ])
+
+  const csvContent = [
+    headers.join(','), // 表头行
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(',')) // 转义单元格内容并拼接行
+  ].join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
+
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `users_${new Date().toISOString().replace(/:/g, '-')}.csv`
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link) // 清理临时链接
 }
 
 // 初始化
