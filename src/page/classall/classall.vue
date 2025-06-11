@@ -537,8 +537,28 @@ const closeAddModal = () => {
   isAddModalOpen.value = false;
 };
 
+function isValidTime(str) {
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  return timeRegex.test(str);
+}
+
 const addCourse = async () => {
   try {
+    if(!isValidTime(newCourse.value.courseName || !isValidTime(newCourse.value.endTime))) {
+      throw new Error("请检查时间格式是否正确！")
+    }
+    {
+      const regex = /^(1[0-9]|20|0?[1-9])$/
+      if(!regex.test(newCourse.value.startWeek)||regex.test(newCourse.value.endWeek)) {
+        throw new Error("请检查起始和结束周数是否正确！")
+      }else{
+        let start = parseInt(newCourse.value.startWeek)
+        let end = parseInt(newCourse.value.endWeek)
+        if(start>end){
+          throw new Error("请检查起始和结束周数是否正确！")
+        }
+      }
+    }
     const response = await fetch('/api/course/add', {
       method: 'POST',
       headers: {
@@ -574,6 +594,21 @@ const closeEditModal = () => {
 
 const updateCourse = async () => {
   try {
+    if(!isValidTime(editCourse.value.courseName || !isValidTime(editCourse.value.endTime))) {
+      throw new Error("请检查时间格式是否正确！")
+    }
+    {
+      const regex = /^(1[0-9]|20|0?[1-9])$/
+      if(!regex.test(editCourse.value.startWeek)||regex.test(editCourse.value.endWeek)) {
+        throw new Error("请检查起始和结束周数是否正确！")
+      }else{
+        let start = parseInt(editCourse.value.startWeek)
+        let end = parseInt(editCourse.value.endWeek)
+        if(start>end){
+          throw new Error("请检查起始和结束周数是否正确！")
+        }
+      }
+    }
     const response = await fetch('/api/course/modify', {
       method: 'POST',
       headers: {
@@ -688,8 +723,7 @@ const addStudent = async () => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '添加学生失败');
+      throw new Error('添加学生失败,请检查用户名是否正确');
     }
 
     showNotification('学生添加成功', 'success');
