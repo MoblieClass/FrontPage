@@ -75,7 +75,7 @@
             </div>
 
             <!-- 角色分配 -->
-            <div class="space-y-2 md:col-span-2">
+            <div class="space-y-2 md:col-span-2" v-if="editing">
               <label class="block text-sm font-medium text-gray-700">
                 分配角色
               </label>
