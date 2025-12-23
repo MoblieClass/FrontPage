@@ -200,7 +200,7 @@ self_info_callback()
                   :class="$route.path === item.name ? 'bg-purple-50 text-purple-600' : 'text-gray-700 hover:bg-purple-50'"
                   class="w-full flex items-center px-4 py-3 transition-all duration-200 no-underline"
                   @click="() => {
-                    openInIframe('http://localhost:9999')
+                    openInIframe('http://scustu.cn:9999')
                   }"
                   >
                 <i :class="'fa '+item.icon + ' text-xl mr-3'" class="w-6 text-center"></i>
